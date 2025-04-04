@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Fashion Helper - 3D Style Viewer</title>
+    <style>
+        body { 
+            margin: 0; 
+            padding: 0; 
+            font-family: Arial, sans-serif;
+            background: #111;
+            color: white;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        header {
+            background: #222;
+            padding: 15px;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+        .content {
+            display: flex;
+            flex: 1;
+        }
+        .model-viewer {
+            flex: 1;
+            position: relative;
+        }
+        model-viewer {
+            width: 100%;
+            height: 100%;
+            background-color: #111;
+        }
+        .controls {
+            width: 280px;
+            background: #222;
+            padding: 20px;
+            box-shadow: -2px 0 5px rgba(0,0,0,0.3);
+            overflow-y: auto;
+        }
+        h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        .control-group {
+            margin-bottom: 20px;
+            border-bottom: 1px solid #444;
+            padding-bottom: 15px;
+        }
+        h3 {
+            margin-top: 0;
+            color: #2a6496;
+            font-size: 18px;
+        }
+        button {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            margin: 8px 0;
+            background: #2a6496;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #1e496e;
+        }
+        .slider-container {
+            margin: 15px 0;
+        }
+        .slider-container label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        input[type="range"] {
+            width: 100%;
+            accent-color: #2a6496;
+        }
+        
+        /* New styles for clothing items */
+        .item-selector {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+        .clothing-item {
+            width: 40px;
+            height: 40px;
+            border-radius: 4px;
+            border: 2px solid #333;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+        .clothing-item:hover {
+            transform: scale(1.1);
+        }
+        .clothing-item.selected {
+            border-color: white;
+            box-shadow: 0 0 5px rgba(255,255,255,0.5);
+        }
+        .item-thumbnail {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .item-name {
+            font-size: 14px;
+            margin: 5px 0;
+            color: #ccc;
+        }
+        .color-options {
+            display: flex;
+            gap: 5px;
+            margin: 10px 0;
+        }
+        .color-option {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid #333;
+            cursor: pointer;
+        }
+        .color-option.selected {
+            border-color: white;
+        }
+        #product-info {
+            margin-top: 15px;
+            padding: 10px;
+            background: #333;
+            border-radius: 4px;
+        }
+        #product-name {
+            font-size: 16px;
+            margin: 0 0 5px 0;
+        }
+        #product-description {
+            font-size: 14px;
+            color: #bbb;
+            margin: 0;
+        }
+        #product-price {
+            font-size: 18px;
+            color: #2a6496;
+            margin: 10px 0;
+        }
+        #add-to-cart {
+            background: #cc3366;
+        }
+        #add-to-cart:hover {
+            background: #aa2255;
+        }
+        
+        /* Loading indicator */
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.7);
+            padding: 20px;
+            border-radius: 8px;
+            z-index: 100;
+        }
+        .loading-spinner {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #2a6496;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Fashion Helper - 3D Style Viewer</h1>
+        </header>
+        <div class="content">
+            <div class="model-viewer">
+                <model-viewer
+                    id="fashion-model"
+                    src="cool_man.glb" 
+                    alt="3D Fashion Model"
+                    auto-rotate
+                    rotation-per-second="30deg"
+                    camera-controls
+                    ar
+                    interaction-prompt="none"
+                    shadow-intensity="1"
+                    style="background-color: #111;"
+                ></model-viewer>
+                
+                <div id="loading">
+                    <div class="loading-spinner"></div>
+                    <div>Loading model...</div>
+                </div>
+            </div>
+            <div class="controls">
+                <div id="clothing-controls">
+                    <!-- Controls will be dynamically added here -->
+                </div>
+                
+                <div class="control-group">
+                    <h3>View Controls</h3>
+                    <div class="slider-container">
+                        <label for="rotation">Rotate Model:</label>
+                        <input type="range" id="rotation" min="0" max="360" step="1" value="0">
+                    </div>
+                    <button id="resetView">Reset View</button>
+                    <button id="toggleAutoRotate">Toggle Auto-Rotate</button>
+                </div>
+                
+                <div id="product-info">
+                    <h4 id="product-name">Select an item</h4>
+                    <p id="product-description">Select a clothing item to see details</p>
+                    <div id="product-price"></div>
+                    <button id="add-to-cart" disabled>Add to Cart</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Model Viewer Script -->
+    <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+    <script>
+        // Define your clothing collection - Replace with your actual collection data
+        const clothingCollection = {
+            shirts: [
+                { 
+                    id: 'shirt1', 
+                    name: 'Classic White Shirt', 
+                    model: 'models/shirt_white.glb', 
+                    thumbnail: 'https://via.placeholder.com/40x40?text=Shirt1',
+                    description: 'A timeless classic white shirt for any occasion',
+                    price: '$49.99',
+                    colors: [
+                        { name: 'White', value: '#ffffff', model: 'models/shirt_white.glb' },
+                        { name: 'Blue', value: '#3366cc', model: 'models/shirt_blue.glb' },
+                        { name: 'Black', value: '#222222', model: 'models/shirt_black.glb' }
+                    ]
+                },
+                { 
+                    id: 'shirt2', 
+                    name: 'Oxford Button-Down', 
+                    model: 'models/shirt_oxford.glb', 
+                    thumbnail: 'https://via.placeholder.com/40x40?text=Shirt2',
+                    description: 'Premium cotton oxford button-down shirt',
+                    price: '$59.99',
+                    colors: [
+                        { name: 'Blue', value: '#3366cc', model: 'models/shirt_oxford_blue.glb' },
+                        { name: 'White', value: '#ffffff', model: 'models/shirt_oxford_white.glb' }
+                    ]
+                }
+            ],
+            pants: [
+                { 
+                    id: 'pants1', 
+                    name: 'Slim Fit Jeans', 
+                    model: 'models/pants_jeans.glb', 
+                    thumbnail: 'https://via.placeholder.com/40x40?text=Pants1',
+                    description: 'Modern slim fit jeans with stretch comfort',
+                    price: '$69.99',
+                    colors: [
+                        { name: 'Dark Blue', value: '#1a2a4a', model: 'models/pants_jeans_dark.glb' },
+                        { name: 'Light Blue', value: '#6a8cbc', model: 'models/pants_jeans_light.glb' },
+                        { name: 'Black', value: '#222222', model: 'models/pants_jeans_black.glb' }
+                    ]
+                },
+                { 
+                    id: 'pants2', 
+                    name: 'Chino Pants', 
+                    model: 'models/pants_chino.glb', 
+                    thumbnail: 'https://via.placeholder.com/40x40?text=Pants2',
+                    description: 'Classic chino pants with comfortable fit',
+                    price: '$54.99',
+                    colors: [
+                        { name: 'Khaki', value: '#d4be98', model: 'models/pants_chino_khaki.glb' },
+                        { name: 'Navy', value: '#1a2a4a', model: 'models/pants_chino_navy.glb' }
+                    ]
+                }
+            ],
+            shoes: [
+                { 
+                    id: 'shoes1', 
+                    name: 'Leather Loafers', 
+                    model: 'models/shoes_loafers.glb', 
+                    thumbnail: 'https://via.placeholder.com/40x40?text=Shoes1',
+                    description: 'Premium leather loafers with comfort insole',
+                    price: '$89.99',
+                    colors: [
+                        { name: 'Brown', value: '#663300', model: 'models/shoes_loafers_brown.glb' },
+                        { name: 'Black', value: '#222222', model: 'models/shoes_loafers_black.glb' }
+                    ]
+                },
+                { 
+                    id: 'shoes2', 
+                    name: 'Canvas Sneakers', 
+                    model: 'models/shoes_sneakers.glb', 
+                    thumbnail: 'https://via.placeholder.com/40x40?text=Shoes2',
+                    description: 'Casual canvas sneakers for everyday wear',
+                    price: '$49.99',
+                    colors: [
+                        { name: 'White', value: '#ffffff', model: 'models/shoes_sneakers_white.glb' },
+                        { name: 'Black', value: '#222222', model: 'models/shoes_sneakers_black.glb' },
+                        { name: 'Red', value: '#cc3333', model: 'models/shoes_sneakers_red.glb' }
+                    ]
+                }
+            ]
+        };
+
+        // Current outfit state
+        const currentOutfit = {
+            shirt: null,
+            pants: null,
+            shoes: null,
+            visible: {
+                shirt: true,
+                pants: true,
+                shoes: true
+            },
+            color: {
+                shirt: null,
+                pants: null,
+                shoes: null
+            },
+            loading: false
+        };
+
+        // Initialize the viewer when document is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            const modelViewer = document.getElementById('fashion-model');
+            const loadingIndicator = document.getElementById('loading');
+            
+            // Show loading indicator until first model loads
+            modelViewer.addEventListener('load', () => {
+                loadingIndicator.style.display = 'none';
+                currentOutfit.loading = false;
+                console.log('Model loaded');
+            });
+            
+            modelViewer.addEventListener('error', (error) => {
+                console.error('Error loading model:', error);
+                loadingIndicator.innerHTML = 'Error loading model. Please try again.';
+                currentOutfit.loading = false;
+            });
+            
+            // Initialize UI
+            initializeClothingUI();
+            
+            // Set default items if available
+            if (clothingCollection.shirts.length > 0) {
+                selectClothingItem('shirt', clothingCollection.shirts[0]);
+            }
+            if (clothingCollection.pants.length > 0) {
+                selectClothingItem('pants', clothingCollection.pants[0]);
+            }
+            if (clothingCollection.shoes.length > 0) {
+                selectClothingItem('shoes', clothingCollection.shoes[0]);
+            }
+            
+            // Set up rotation control
+            document.getElementById('rotation').addEventListener('input', function(e) {
+                const angle = e.target.value * (Math.PI / 180); // Degrees to radians
+                modelViewer.cameraOrbit = `${angle}rad 75deg 105%`; // Yaw, pitch, radius
+            });
+            
+            // Reset view button
+            document.getElementById('resetView').addEventListener('click', function() {
+                modelViewer.cameraOrbit = '0deg 75deg 105%'; // Default view
+                document.getElementById('rotation').value = 0;
+            });
+            
+            // Toggle auto-rotate button
+            document.getElementById('toggleAutoRotate').addEventListener('click', function() {
+                modelViewer.autoRotate = !modelViewer.autoRotate;
+                this.textContent = modelViewer.autoRotate ? 'Stop Auto-Rotate' : 'Start Auto-Rotate';
+            });
+            
+            // Add to cart button
+            document.getElementById('add-to-cart').addEventListener('click', function() {
+                const selectedItems = [];
+                
+                if (currentOutfit.shirt) {
+                    selectedItems.push({
+                        type: 'shirt',
+                        name: currentOutfit.shirt.name,
+                        color: currentOutfit.color.shirt ? currentOutfit.color.shirt.name : 'Default'
+                    });
+                }
+                
+                if (currentOutfit.pants) {
+                    selectedItems.push({
+                        type: 'pants',
+                        name: currentOutfit.pants.name,
+                        color: currentOutfit.color.pants ? currentOutfit.color.pants.name : 'Default'
+                    });
+                }
+                
+                if (currentOutfit.shoes) {
+                    selectedItems.push({
+                        type: 'shoes',
+                        name: currentOutfit.shoes.name,
+                        color: currentOutfit.color.shoes ? currentOutfit.color.shoes.name : 'Default'
+                    });
+                }
+                
+                alert('Added to Cart: ' + selectedItems.map(item => `${item.color} ${item.name}`).join(', '));
+                // In a real application, you would integrate with your cart system here
+            });
+        });
+
+        // Initialize the UI with clothing options
+        function initializeClothingUI() {
+            const clothingControls = document.getElementById('clothing-controls');
+            const categories = [
+                { key: 'shirts', label: 'Shirts', type: 'shirt' },
+                { key: 'pants', label: 'Pants', type: 'pants' },
+                { key: 'shoes', label: 'Shoes', type: 'shoes' }
+            ];
+            
+            // Create UI for each category
+            categories.forEach(category => {
+                if (clothingCollection[category.key].length === 0) return;
+                
+                const controlGroup = document.createElement('div');
+                controlGroup.className = 'control-group';
+                controlGroup.innerHTML = `<h3>${category.label}</h3>`;
+                
+                // Create item selector
+                const itemSelector = document.createElement('div');
+                itemSelector.className = 'item-selector';
+                
+                // Add items to selector
+                clothingCollection[category.key].forEach(item => {
+                    const itemElement = document.createElement('div');
+                    itemElement.className = 'clothing-item';
+                    itemElement.dataset.id = item.id;
+                    itemElement.dataset.type = category.type;
+                    itemElement.title = item.name;
+                    
+                    // Add thumbnail image
+                    const thumbnail = document.createElement('img');
+                    thumbnail.src = item.thumbnail;
+                    thumbnail.className = 'item-thumbnail';
+                    thumbnail.alt = item.name;
+                    itemElement.appendChild(thumbnail);
+                    
+                    // Add click event
+                    itemElement.addEventListener('click', () => {
+                        // Update selection UI
+                        document.querySelectorAll(`.clothing-item[data-type="${category.type}"]`)
+                            .forEach(el => el.classList.remove('selected'));
+                        itemElement.classList.add('selected');
+                        
+                        // Update current outfit
+                        selectClothingItem(category.type, item);
+                    });
+                    
+                    itemSelector.appendChild(itemElement);
+                });
+                
+                // Add color options container (will be populated when item is selected)
+                const colorOptions = document.createElement('div');
+                colorOptions.id = `${category.type}-colors`;
+                colorOptions.className = 'color-options';
+                
+                // Add item name display
+                const itemName = document.createElement('div');
+                itemName.id = `${category.type}-name`;
+                itemName.className = 'item-name';
+                itemName.textContent = 'Select a ' + category.type;
+                
+                // Add toggle button
+                const toggleButton = document.createElement('button');
+                toggleButton.id = `toggle-${category.type}`;
+                toggleButton.textContent = `Toggle ${category.type}`;
+                toggleButton.addEventListener('click', () => toggleClothingVisibility(category.type));
+                
+                // Add elements to control group
+                controlGroup.appendChild(itemSelector);
+                controlGroup.appendChild(itemName);
+                controlGroup.appendChild(colorOptions);
+                controlGroup.appendChild(toggleButton);
+                
+                // Add to controls
+                clothingControls.appendChild(controlGroup);
+            });
+        }
+
+        // Function to select a clothing item
+        function selectClothingItem(type, item) {
+            currentOutfit[type] = item;
+            
+            // Update name display
+            const nameElement = document.getElementById(`${type}-name`);
+            if (nameElement) {
+                nameElement.textContent = item.name;
+            }
+            
+            // Update color options
+            updateColorOptions(type, item);
+            
+            // Update product info
+            updateProductInfo(item);
+            
+            // Select first color if available
+            if (item.colors && item.colors.length > 0) {
+                selectItemColor(type, item.colors[0]);
+            } else {
+                // If no colors available, just load the model
+                loadModel(type, item.model);
+            }
+            
+            // Enable add to cart button
+            document.getElementById('add-to-cart').disabled = false;
+        }
+
+        // Function to update color options for an item
+        function updateColorOptions(type, item) {
+            const colorContainer = document.getElementById(`${type}-colors`);
+            if (!colorContainer) return;
+            
+            // Clear existing colors
+            colorContainer.innerHTML = '';
+            
+            // Add color options if available
+            if (item.colors && item.colors.length > 0) {
+                item.colors.forEach((color, index) => {
+                    const colorElement = document.createElement('div');
+                    colorElement.className = 'color-option';
+                    colorElement.style.backgroundColor = color.value;
+                    colorElement.title = color.name;
+                    colorElement.dataset.index = index;
+                    
+                    // Select first color by default
+                    if (index === 0) {
+                        colorElement.classList.add('selected');
+                    }
+                    
+                    // Add click event
+                    colorElement.addEventListener('click', () => {
+                        // Update selection UI
+                        document.querySelectorAll(`#${type}-colors .color-option`)
+                            .forEach(el => el.classList.remove('selected'));
+                        colorElement.classList.add('selected');
+                        
+                        // Update color and model
+                        selectItemColor(type, color);
+                    });
+                    
+                    colorContainer.appendChild(colorElement);
+                });
+            }
+        }
+
+        // Function to select a color for an item
+        function selectItemColor(type, color) {
+            currentOutfit.color[type] = color;
+            
+            // Load the appropriate model for this color
+            if (color.model) {
+                loadModel(type, color.model);
+            }
+        }
+
+        // Function to toggle visibility of a clothing item
+        function toggleClothingVisibility(type) {
+            currentOutfit.visible[type] = !currentOutfit.visible[type];
+            
+            const toggleButton = document.getElementById(`toggle-${type}`);
+            if (toggleButton) {
+                toggleButton.textContent = currentOutfit.visible[type] ? 
+                    `Hide ${type}` : `Show ${type}`;
+            }
+            
+            // If we're using a layered approach with separate models,
+            // we need to reload the composite model
+            updateCompositeModel();
+        }
+
+        // Function to load a model for a specific clothing type
+        function loadModel(type, modelPath) {
+            // Simple loading - just sets model path directly
+            // This is a simplified approach for demonstration
+            // Real implementation would depend on how your models are structured
+            
+            // For full body model replacement, you would do:
+            // document.getElementById('fashion-model').src = modelPath;
+            
+            // For layered approach, update our in-memory state and rebuild composite
+            currentOutfit.loading = true;
+            document.getElementById('loading').style.display = 'block';
+            
+            // The following is a placeholder that simulates model loading
+            // In a real application, you would need to implement this based on your model structure
+            console.log(`Loading ${type} model: ${modelPath}`);
+            
+            // Update the composite model after a short delay (simulating load time)
+            setTimeout(() => {
+                updateCompositeModel();
+            }, 500);
+        }
+
+        // Function to update composite model based on current selections
+        function updateCompositeModel() {
+            // This is a placeholder function - in a real application, 
+            // you would need to implement this based on your model structure
+            
+            // Approach 1: For models with separate nodes, toggle visibility
+            const modelViewer = document.getElementById('fashion-model');
+            if (modelViewer.model && modelViewer.model.getNodeList) {
+                // This would work if your model has named nodes
+                try {
+                    // Get all nodes
+                    const nodes = Array.from(modelViewer.model.getNodeList());
+                    
+                    // Toggle visibility based on type
+                    nodes.forEach(node => {
+                        const nodeName = node.name.toLowerCase();
+                        if (nodeName.includes('shirt')) {
+                            node.visible = currentOutfit.visible.shirt;
+                        } else if (nodeName.includes('pants') || nodeName.includes('trouser')) {
+                            node.visible = currentOutfit.visible.pants;
+                        } else if (nodeName.includes('shoes') || nodeName.includes('footwear')) {
+                            node.visible = currentOutfit.visible.shoes;
+                        }
+                    });
+                } catch (error) {
+                    console.error('Error updating node visibility:', error);
+                }
+            }
+            
+            // Approach 2: For models with named materials, change material properties
+            if (modelViewer.model && modelViewer.model.materials) {
+                try {
+                    // Apply color changes to materials
+                    modelViewer.model.materials.forEach(material => {
+                        const materialName = material.name.toLowerCase();
+                        
+                        // Handle shirt materials
+                        if (materialName.includes('shirt')) {
+                            if (!currentOutfit.visible.shirt) {
+                                // Hide by making transparent
+                                material.pbrMetallicRoughness.setBaseColorFactor([1, 1, 1, 0]);
+                            } else if (currentOutfit.color.shirt) {
+                                // Apply color
+                                const color = hexToRGB(currentOutfit.color.shirt.value);
+                                material.pbrMetallicRoughness.setBaseColorFactor([
+                                    color.r/255, color.g/255, color.b/255, 1
+                                ]);
+                            }
+                        }
+                        
+                        // Handle pants materials
+                        else if (materialName.includes('pants') || materialName.includes('trouser')) {
+                            if (!currentOutfit.visible.pants) {
+                                material.pbrMetallicRoughness.setBaseColorFactor([1, 1, 1, 0]);
+                            } else if (currentOutfit.color.pants) {
+                                const color = hexToRGB(currentOutfit.color.pants.value);
+                                material.pbrMetallicRoughness.setBaseColorFactor([
+                                    color.r/255, color.g/255, color.b/255, 1
+                                ]);
+                            }
+                        }
+                        
+                        // Handle shoes materials
+                        else if (materialName.includes('shoes') || materialName.includes('footwear')) {
+                            if (!currentOutfit.visible.shoes) {
+                                material.pbrMetallicRoughness.setBaseColorFactor([1, 1, 1, 0]);
+                            } else if (currentOutfit.color.shoes) {
+                                const color = hexToRGB(currentOutfit.color.shoes.value);
+                                material.pbrMetallicRoughness.setBaseColorFactor([
+                                    color.r/255, color.g/255, color.b/255, 1
+                                ]);
+                            }
+                        }
+                    });
+                } catch (error) {
+                    console.error('Error updating materials:', error);
+                }
+            }
+            
+            // Simulate model loading complete
+            currentOutfit.loading = false;
+            document.getElementById('loading').style.display = 'none';
+        }
+
+        // Function to update product info panel
+        function updateProductInfo(item) {
+            if (!item) return;
+            
+            document.getElementById('product-name').textContent = item.name;
+            document.getElementById('product-description').textContent = item.description || '';
+            document.getElementById('product-price').textContent = item.price || '';
+        }
+
+        // Helper function to convert hex color to RGB
+        function hexToRGB(hex) {
+            // Remove # if present
+            hex = hex.replace('#', '');
+            
+            // Convert 3-digit hex to 6-digit
+            if (hex.length === 3) {
+                hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+            }
+            
+            // Parse hex values
+            const r = parseInt(hex.substring(0, 2), 16);
+            const g = parseInt(hex.substring(2, 4), 16);
+            const b = parseInt(hex.substring(4, 6), 16);
+            
+            return { r, g, b };
+        }
+    </script>
+</body>
+</html>
