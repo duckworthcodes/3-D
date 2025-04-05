@@ -82,8 +82,6 @@
             width: 100%;
             accent-color: #2a6496;
         }
-        
-        /* New styles for clothing items */
         .item-selector {
             display: flex;
             flex-wrap: wrap;
@@ -158,8 +156,6 @@
         #add-to-cart:hover {
             background: #aa2255;
         }
-        
-        /* Loading indicator */
         #loading {
             position: absolute;
             top: 50%;
@@ -183,6 +179,18 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        .gender-toggle {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .gender-toggle button {
+            width: 50%;
+            background: #444;
+        }
+        .gender-toggle button.selected {
+            background: #2a6496;
+        }
     </style>
 </head>
 <body>
@@ -204,7 +212,6 @@
                     shadow-intensity="1"
                     style="background-color: #111;"
                 ></model-viewer>
-                
                 <div id="loading">
                     <div class="loading-spinner"></div>
                     <div>Loading model...</div>
@@ -214,7 +221,29 @@
                 <div id="clothing-controls">
                     <!-- Controls will be dynamically added here -->
                 </div>
-                
+
+                <!-- Body Controls with Gender Switch -->
+                <div class="control-group">
+                    <h3>Body Controls</h3>
+                    <div class="gender-toggle">
+                        <button id="gender-boy" class="selected">Boy</button>
+                        <button id="gender-girl">Girl</button>
+                    </div>
+                    <div class="slider-container">
+                        <label for="height">Height:</label>
+                        <input type="range" id="height" min="0.8" max="1.2" step="0.01" value="1">
+                    </div>
+                    <div class="slider-container">
+                        <label for="weight">Weight:</label>
+                        <input type="range" id="weight" min="0" max="1" step="0.01" value="0.5">
+                    </div>
+                    <div class="slider-container">
+                        <label for="buffness">Buffness:</label>
+                        <input type="range" id="buffness" min="0" max="1" step="0.01" value="0.5">
+                    </div>
+                    <button id="resetBody">Reset Body</button>
+                </div>
+
                 <div class="control-group">
                     <h3>View Controls</h3>
                     <div class="slider-container">
@@ -224,7 +253,7 @@
                     <button id="resetView">Reset View</button>
                     <button id="toggleAutoRotate">Toggle Auto-Rotate</button>
                 </div>
-                
+
                 <div id="product-info">
                     <h4 id="product-name">Select an item</h4>
                     <p id="product-description">Select a clothing item to see details</p>
@@ -238,7 +267,6 @@
     <!-- Model Viewer Script -->
     <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
     <script>
-        // Define your clothing collection - Replace with your actual collection data
         const clothingCollection = {
             shirts: [
                 { 
@@ -323,7 +351,6 @@
             ]
         };
 
-        // Current outfit state
         const currentOutfit = {
             shirt: null,
             pants: null,
@@ -338,31 +365,34 @@
                 pants: null,
                 shoes: null
             },
+            body: {
+                gender: 'boy', // Default to boy
+                height: 1.0,
+                weight: 0.5,
+                buffness: 0.5
+            },
             loading: false
         };
 
-        // Initialize the viewer when document is loaded
         document.addEventListener('DOMContentLoaded', function() {
             const modelViewer = document.getElementById('fashion-model');
             const loadingIndicator = document.getElementById('loading');
-            
-            // Show loading indicator until first model loads
+
             modelViewer.addEventListener('load', () => {
                 loadingIndicator.style.display = 'none';
                 currentOutfit.loading = false;
-                console.log('Model loaded');
+                console.log('Model loaded. Available morph targets:', modelViewer.availableMorphs);
+                updateBodyStructure(modelViewer); // Apply initial body settings
             });
-            
+
             modelViewer.addEventListener('error', (error) => {
                 console.error('Error loading model:', error);
                 loadingIndicator.innerHTML = 'Error loading model. Please try again.';
                 currentOutfit.loading = false;
             });
-            
-            // Initialize UI
+
             initializeClothingUI();
-            
-            // Set default items if available
+
             if (clothingCollection.shirts.length > 0) {
                 selectClothingItem('shirt', clothingCollection.shirts[0]);
             }
@@ -372,29 +402,72 @@
             if (clothingCollection.shoes.length > 0) {
                 selectClothingItem('shoes', clothingCollection.shoes[0]);
             }
-            
-            // Set up rotation control
+
             document.getElementById('rotation').addEventListener('input', function(e) {
-                const angle = e.target.value * (Math.PI / 180); // Degrees to radians
-                modelViewer.cameraOrbit = `${angle}rad 75deg 105%`; // Yaw, pitch, radius
+                const angle = e.target.value * (Math.PI / 180);
+                modelViewer.cameraOrbit = `${angle}rad 75deg 105%`;
             });
-            
-            // Reset view button
+
             document.getElementById('resetView').addEventListener('click', function() {
-                modelViewer.cameraOrbit = '0deg 75deg 105%'; // Default view
+                modelViewer.cameraOrbit = '0deg 75deg 105%';
                 document.getElementById('rotation').value = 0;
             });
-            
-            // Toggle auto-rotate button
+
             document.getElementById('toggleAutoRotate').addEventListener('click', function() {
                 modelViewer.autoRotate = !modelViewer.autoRotate;
                 this.textContent = modelViewer.autoRotate ? 'Stop Auto-Rotate' : 'Start Auto-Rotate';
             });
-            
-            // Add to cart button
+
+            // Gender switch handlers
+            const boyButton = document.getElementById('gender-boy');
+            const girlButton = document.getElementById('gender-girl');
+
+            boyButton.addEventListener('click', () => {
+                if (currentOutfit.body.gender !== 'boy') {
+                    currentOutfit.body.gender = 'boy';
+                    boyButton.classList.add('selected');
+                    girlButton.classList.remove('selected');
+                    switchGender(modelViewer);
+                }
+            });
+
+            girlButton.addEventListener('click', () => {
+                if (currentOutfit.body.gender !== 'girl') {
+                    currentOutfit.body.gender = 'girl';
+                    girlButton.classList.add('selected');
+                    boyButton.classList.remove('selected');
+                    switchGender(modelViewer);
+                }
+            });
+
+            document.getElementById('height').addEventListener('input', function(e) {
+                currentOutfit.body.height = parseFloat(e.target.value);
+                updateBodyStructure(modelViewer);
+            });
+
+            document.getElementById('weight').addEventListener('input', function(e) {
+                currentOutfit.body.weight = parseFloat(e.target.value);
+                console.log('Weight slider changed to:', currentOutfit.body.weight);
+                updateBodyStructure(modelViewer);
+            });
+
+            document.getElementById('buffness').addEventListener('input', function(e) {
+                currentOutfit.body.buffness = parseFloat(e.target.value);
+                updateBodyStructure(modelViewer);
+            });
+
+            document.getElementById('resetBody').addEventListener('click', function() {
+                currentOutfit.body.height = 1.0;
+                currentOutfit.body.weight = 0.5;
+                currentOutfit.body.buffness = 0.5;
+                document.getElementById('height').value = 1.0;
+                document.getElementById('weight').value = 0.5;
+                document.getElementById('buffness').value = 0.5;
+                updateBodyStructure(modelViewer);
+            });
+
             document.getElementById('add-to-cart').addEventListener('click', function() {
                 const selectedItems = [];
-                
                 if (currentOutfit.shirt) {
                     selectedItems.push({
                         type: 'shirt',
@@ -402,7 +475,6 @@
                         color: currentOutfit.color.shirt ? currentOutfit.color.shirt.name : 'Default'
                     });
                 }
-                
                 if (currentOutfit.pants) {
                     selectedItems.push({
                         type: 'pants',
@@ -410,7 +482,6 @@
                         color: currentOutfit.color.pants ? currentOutfit.color.pants.name : 'Default'
                     });
                 }
-                
                 if (currentOutfit.shoes) {
                     selectedItems.push({
                         type: 'shoes',
@@ -418,13 +489,10 @@
                         color: currentOutfit.color.shoes ? currentOutfit.color.shoes.name : 'Default'
                     });
                 }
-                
                 alert('Added to Cart: ' + selectedItems.map(item => `${item.color} ${item.name}`).join(', '));
-                // In a real application, you would integrate with your cart system here
             });
         });
 
-        // Initialize the UI with clothing options
         function initializeClothingUI() {
             const clothingControls = document.getElementById('clothing-controls');
             const categories = [
@@ -432,113 +500,88 @@
                 { key: 'pants', label: 'Pants', type: 'pants' },
                 { key: 'shoes', label: 'Shoes', type: 'shoes' }
             ];
-            
-            // Create UI for each category
+
             categories.forEach(category => {
                 if (clothingCollection[category.key].length === 0) return;
-                
+
                 const controlGroup = document.createElement('div');
                 controlGroup.className = 'control-group';
                 controlGroup.innerHTML = `<h3>${category.label}</h3>`;
-                
-                // Create item selector
+
                 const itemSelector = document.createElement('div');
                 itemSelector.className = 'item-selector';
-                
-                // Add items to selector
+
                 clothingCollection[category.key].forEach(item => {
                     const itemElement = document.createElement('div');
                     itemElement.className = 'clothing-item';
                     itemElement.dataset.id = item.id;
                     itemElement.dataset.type = category.type;
                     itemElement.title = item.name;
-                    
-                    // Add thumbnail image
+
                     const thumbnail = document.createElement('img');
                     thumbnail.src = item.thumbnail;
                     thumbnail.className = 'item-thumbnail';
                     thumbnail.alt = item.name;
                     itemElement.appendChild(thumbnail);
-                    
-                    // Add click event
+
                     itemElement.addEventListener('click', () => {
-                        // Update selection UI
                         document.querySelectorAll(`.clothing-item[data-type="${category.type}"]`)
                             .forEach(el => el.classList.remove('selected'));
                         itemElement.classList.add('selected');
-                        
-                        // Update current outfit
                         selectClothingItem(category.type, item);
                     });
-                    
+
                     itemSelector.appendChild(itemElement);
                 });
-                
-                // Add color options container (will be populated when item is selected)
+
                 const colorOptions = document.createElement('div');
                 colorOptions.id = `${category.type}-colors`;
                 colorOptions.className = 'color-options';
-                
-                // Add item name display
+
                 const itemName = document.createElement('div');
                 itemName.id = `${category.type}-name`;
                 itemName.className = 'item-name';
                 itemName.textContent = 'Select a ' + category.type;
-                
-                // Add toggle button
+
                 const toggleButton = document.createElement('button');
                 toggleButton.id = `toggle-${category.type}`;
                 toggleButton.textContent = `Toggle ${category.type}`;
                 toggleButton.addEventListener('click', () => toggleClothingVisibility(category.type));
-                
-                // Add elements to control group
+
                 controlGroup.appendChild(itemSelector);
                 controlGroup.appendChild(itemName);
                 controlGroup.appendChild(colorOptions);
                 controlGroup.appendChild(toggleButton);
-                
-                // Add to controls
                 clothingControls.appendChild(controlGroup);
             });
         }
 
-        // Function to select a clothing item
         function selectClothingItem(type, item) {
             currentOutfit[type] = item;
-            
-            // Update name display
+
             const nameElement = document.getElementById(`${type}-name`);
             if (nameElement) {
                 nameElement.textContent = item.name;
             }
-            
-            // Update color options
+
             updateColorOptions(type, item);
-            
-            // Update product info
             updateProductInfo(item);
-            
-            // Select first color if available
+
             if (item.colors && item.colors.length > 0) {
                 selectItemColor(type, item.colors[0]);
             } else {
-                // If no colors available, just load the model
                 loadModel(type, item.model);
             }
-            
-            // Enable add to cart button
+
             document.getElementById('add-to-cart').disabled = false;
         }
 
-        // Function to update color options for an item
         function updateColorOptions(type, item) {
             const colorContainer = document.getElementById(`${type}-colors`);
             if (!colorContainer) return;
-            
-            // Clear existing colors
+
             colorContainer.innerHTML = '';
-            
-            // Add color options if available
+
             if (item.colors && item.colors.length > 0) {
                 item.colors.forEach((color, index) => {
                     const colorElement = document.createElement('div');
@@ -546,147 +589,133 @@
                     colorElement.style.backgroundColor = color.value;
                     colorElement.title = color.name;
                     colorElement.dataset.index = index;
-                    
-                    // Select first color by default
+
                     if (index === 0) {
                         colorElement.classList.add('selected');
                     }
-                    
-                    // Add click event
+
                     colorElement.addEventListener('click', () => {
-                        // Update selection UI
                         document.querySelectorAll(`#${type}-colors .color-option`)
                             .forEach(el => el.classList.remove('selected'));
                         colorElement.classList.add('selected');
-                        
-                        // Update color and model
                         selectItemColor(type, color);
                     });
-                    
+
                     colorContainer.appendChild(colorElement);
                 });
             }
         }
 
-        // Function to select a color for an item
         function selectItemColor(type, color) {
             currentOutfit.color[type] = color;
-            
-            // Load the appropriate model for this color
             if (color.model) {
                 loadModel(type, color.model);
             }
         }
 
-        // Function to toggle visibility of a clothing item
         function toggleClothingVisibility(type) {
             currentOutfit.visible[type] = !currentOutfit.visible[type];
-            
             const toggleButton = document.getElementById(`toggle-${type}`);
             if (toggleButton) {
                 toggleButton.textContent = currentOutfit.visible[type] ? 
                     `Hide ${type}` : `Show ${type}`;
             }
-            
-            // If we're using a layered approach with separate models,
-            // we need to reload the composite model
             updateCompositeModel();
         }
 
-        // Function to load a model for a specific clothing type
         function loadModel(type, modelPath) {
-            // Simple loading - just sets model path directly
-            // This is a simplified approach for demonstration
-            // Real implementation would depend on how your models are structured
-            
-            // For full body model replacement, you would do:
-            // document.getElementById('fashion-model').src = modelPath;
-            
-            // For layered approach, update our in-memory state and rebuild composite
             currentOutfit.loading = true;
             document.getElementById('loading').style.display = 'block';
-            
-            // The following is a placeholder that simulates model loading
-            // In a real application, you would need to implement this based on your model structure
             console.log(`Loading ${type} model: ${modelPath}`);
-            
-            // Update the composite model after a short delay (simulating load time)
             setTimeout(() => {
                 updateCompositeModel();
             }, 500);
         }
 
-        // Function to update composite model based on current selections
-        function updateCompositeModel() {
-            // This is a placeholder function - in a real application, 
-            // you would need to implement this based on your model structure
-            
-            // Approach 1: For models with separate nodes, toggle visibility
-            const modelViewer = document.getElementById('fashion-model');
-            if (modelViewer.model && modelViewer.model.getNodeList) {
-                // This would work if your model has named nodes
-                try {
-                    // Get all nodes
-                    const nodes = Array.from(modelViewer.model.getNodeList());
-                    
-                    // Toggle visibility based on type
-                    nodes.forEach(node => {
-                        const nodeName = node.name.toLowerCase();
-                        if (nodeName.includes('shirt')) {
-                            node.visible = currentOutfit.visible.shirt;
-                        } else if (nodeName.includes('pants') || nodeName.includes('trouser')) {
-                            node.visible = currentOutfit.visible.pants;
-                        } else if (nodeName.includes('shoes') || nodeName.includes('footwear')) {
-                            node.visible = currentOutfit.visible.shoes;
-                        }
-                    });
-                } catch (error) {
-                    console.error('Error updating node visibility:', error);
-                }
+        function switchGender(modelViewer) {
+            currentOutfit.loading = true;
+            document.getElementById('loading').style.display = 'block';
+            const newSrc = currentOutfit.body.gender === 'boy' ? 'cool_man.glb' : 'pubg_girl_pose_t.glb';
+            console.log(`Switching to ${currentOutfit.body.gender} model: ${newSrc}`);
+            modelViewer.src = newSrc; // This triggers a reload of the model
+            // Body structure will be reapplied via the 'load' event
+        }
+
+        function updateBodyStructure(modelViewer) {
+            if (!modelViewer.model) {
+                console.warn('Model not loaded yet.');
+                return;
             }
-            
-            // Approach 2: For models with named materials, change material properties
+
+            // Apply height scaling (uniform scale)
+            modelViewer.scale = `${currentOutfit.body.height} ${currentOutfit.body.height} ${currentOutfit.body.height}`;
+
+            // Apply weight and buffness using morph targets if available
+            const morphTargets = modelViewer.availableMorphs || [];
+            console.log('Current morph targets:', morphTargets);
+
+            if (morphTargets.length > 0) {
+                try {
+                    const weightIndex = morphTargets.indexOf('weight');
+                    const buffnessIndex = morphTargets.indexOf('buffness');
+
+                    if (weightIndex !== -1) {
+                        modelViewer.setMorphValue(weightIndex, currentOutfit.body.weight);
+                        console.log(`Applied weight morph target at index ${weightIndex} with value ${currentOutfit.body.weight}`);
+                    } else {
+                        console.warn('Morph target "weight" not found. Using fallback scaling.');
+                        const weightScale = 1 + (currentOutfit.body.weight - 0.5) * 0.2; // -10% to +10% width
+                        modelViewer.scale = `${weightScale} ${currentOutfit.body.height} ${weightScale}`;
+                    }
+
+                    if (buffnessIndex !== -1) {
+                        modelViewer.setMorphValue(buffnessIndex, currentOutfit.body.buffness);
+                        console.log(`Applied buffness morph target at index ${buffnessIndex} with value ${currentOutfit.body.buffness}`);
+                    } else {
+                        console.warn('Morph target "buffness" not found.');
+                    }
+                } catch (error) {
+                    console.error('Error updating morph targets:', error);
+                }
+            } else {
+                console.warn('No morph targets available. Using fallback scaling for weight.');
+                const weightScale = 1 + (currentOutfit.body.weight - 0.5) * 0.2; // -10% to +10% width
+                modelViewer.scale = `${weightScale} ${currentOutfit.body.height} ${weightScale}`;
+            }
+
+            updateCompositeModel();
+        }
+
+        function updateCompositeModel() {
+            const modelViewer = document.getElementById('fashion-model');
+            if (!modelViewer.model) return;
+
             if (modelViewer.model && modelViewer.model.materials) {
                 try {
-                    // Apply color changes to materials
                     modelViewer.model.materials.forEach(material => {
                         const materialName = material.name.toLowerCase();
-                        
-                        // Handle shirt materials
                         if (materialName.includes('shirt')) {
                             if (!currentOutfit.visible.shirt) {
-                                // Hide by making transparent
                                 material.pbrMetallicRoughness.setBaseColorFactor([1, 1, 1, 0]);
                             } else if (currentOutfit.color.shirt) {
-                                // Apply color
                                 const color = hexToRGB(currentOutfit.color.shirt.value);
-                                material.pbrMetallicRoughness.setBaseColorFactor([
-                                    color.r/255, color.g/255, color.b/255, 1
-                                ]);
+                                material.pbrMetallicRoughness.setBaseColorFactor([color.r/255, color.g/255, color.b/255, 1]);
                             }
                         }
-                        
-                        // Handle pants materials
                         else if (materialName.includes('pants') || materialName.includes('trouser')) {
                             if (!currentOutfit.visible.pants) {
                                 material.pbrMetallicRoughness.setBaseColorFactor([1, 1, 1, 0]);
                             } else if (currentOutfit.color.pants) {
                                 const color = hexToRGB(currentOutfit.color.pants.value);
-                                material.pbrMetallicRoughness.setBaseColorFactor([
-                                    color.r/255, color.g/255, color.b/255, 1
-                                ]);
+                                material.pbrMetallicRoughness.setBaseColorFactor([color.r/255, color.g/255, color.b/255, 1]);
                             }
                         }
-                        
-                        // Handle shoes materials
                         else if (materialName.includes('shoes') || materialName.includes('footwear')) {
                             if (!currentOutfit.visible.shoes) {
                                 material.pbrMetallicRoughness.setBaseColorFactor([1, 1, 1, 0]);
                             } else if (currentOutfit.color.shoes) {
                                 const color = hexToRGB(currentOutfit.color.shoes.value);
-                                material.pbrMetallicRoughness.setBaseColorFactor([
-                                    color.r/255, color.g/255, color.b/255, 1
-                                ]);
+                                material.pbrMetallicRoughness.setBaseColorFactor([color.r/255, color.g/255, color.b/255, 1]);
                             }
                         }
                     });
@@ -694,36 +723,26 @@
                     console.error('Error updating materials:', error);
                 }
             }
-            
-            // Simulate model loading complete
+
             currentOutfit.loading = false;
             document.getElementById('loading').style.display = 'none';
         }
 
-        // Function to update product info panel
         function updateProductInfo(item) {
             if (!item) return;
-            
             document.getElementById('product-name').textContent = item.name;
             document.getElementById('product-description').textContent = item.description || '';
             document.getElementById('product-price').textContent = item.price || '';
         }
 
-        // Helper function to convert hex color to RGB
         function hexToRGB(hex) {
-            // Remove # if present
             hex = hex.replace('#', '');
-            
-            // Convert 3-digit hex to 6-digit
             if (hex.length === 3) {
                 hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
             }
-            
-            // Parse hex values
             const r = parseInt(hex.substring(0, 2), 16);
             const g = parseInt(hex.substring(2, 4), 16);
             const b = parseInt(hex.substring(4, 6), 16);
-            
             return { r, g, b };
         }
     </script>
