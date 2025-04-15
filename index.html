@@ -697,7 +697,7 @@
                     this.scene.remove(this.currentModel);
                 }
 
-                const modelPath = `cool_man.glb`;
+                const modelPath = gender === 'male' ? 'cool_man.glb' : 'cool_girl.glb';
                 
                 this.loader.load(modelPath, (gltf) => {
                     this.currentModel = gltf.scene;
